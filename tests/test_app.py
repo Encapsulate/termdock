@@ -35,11 +35,16 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             page_text = await page.text()
             assert "TERMDOCK" in page_text
             assert "two fingers" in page_text
+            assert 'data-modifier="ctrl"' in page_text
+            assert 'data-modifier="alt"' in page_text
+            assert 'data-key="tab"' in page_text
+            assert 'data-key="clear"' in page_text
             script = await client.get("/static/app.js", headers=headers)
             assert script.status == 200
             script_text = await script.text()
             assert "installTouchScroll" in script_text
             assert "visualViewport" in script_text
+            assert "emitTerminalKey" in script_text
             stylesheet = await client.get("/static/style.css", headers=headers)
             assert stylesheet.status == 200
             assert "--viewport-height" in await stylesheet.text()

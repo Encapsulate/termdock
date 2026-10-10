@@ -2,6 +2,13 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.2 — 2026-10-10
+
+- Added a permanent compact Ctrl, Alt, Tab, and Clear key bar directly below the terminal.
+- Ctrl and Alt latch visibly for the next physical or software-keyboard input and then reset.
+- Tab sends a terminal Tab key; Clear sends Ctrl+L without ending or recreating the session.
+- Key-bar taps preserve xterm focus to avoid dismissing the Android software keyboard.
+
 ## 1.0.1 — 2026-10-10
 
 - Added explicit two-finger terminal-history scrolling for touch devices while preserving one-finger terminal interaction.

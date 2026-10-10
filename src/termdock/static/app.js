@@ -3,10 +3,13 @@
 const tabsNode=document.querySelector("#tabs");
 const viewsNode=document.querySelector("#terminal-views");
 const note=document.querySelector("#note");
+const keybar=document.querySelector("#keybar");
 const frames=new Map();
 let tabs=[];
 let active=localStorage.getItem("termdock-active")||"main";
 let shortcutTask=null;
+let suppressInputOnce=false;
+const modifiers={ctrl:false,alt:false};
 
 const esc=value=>String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
 const terminalUrl=id=>`/console/?arg=${encodeURIComponent(id)}`;
@@ -30,6 +33,7 @@ function shortcutIndex(event){
 }
 
 function handleShortcut(event){
+  if(event.termdockToolbarKey)return;
   const index=shortcutIndex(event);
   if(index<0)return;
   event.preventDefault();event.stopImmediatePropagation();
@@ -38,6 +42,48 @@ function handleShortcut(event){
 
 function focusFrame(frame){
   requestAnimationFrame(()=>{try{frame.contentWindow.focus();frame.contentDocument.querySelector(".xterm-helper-textarea")?.focus()}catch{}});
+}
+
+function renderModifiers(){
+  keybar.querySelector('[data-modifier="ctrl"]').setAttribute("aria-pressed",String(modifiers.ctrl));
+  keybar.querySelector('[data-modifier="alt"]').setAttribute("aria-pressed",String(modifiers.alt));
+}
+
+function clearModifiers(){
+  modifiers.ctrl=false;modifiers.alt=false;renderModifiers();
+}
+
+function emitTerminalKey(key,code,keyCode,forced={}){
+  const frame=frames.get(active);
+  try{
+    const win=frame.contentWindow;
+    const target=frame.contentDocument.querySelector(".xterm-helper-textarea");
+    if(!target)return false;
+    const ctrlKey=forced.ctrlKey??modifiers.ctrl;
+    const altKey=forced.altKey??modifiers.alt;
+    for(const type of ["keydown","keyup"]){
+      const event=new win.KeyboardEvent(type,{key,code,ctrlKey,altKey,bubbles:true,cancelable:true});
+      Object.defineProperties(event,{keyCode:{get:()=>keyCode},which:{get:()=>keyCode},termdockToolbarKey:{value:true}});
+      target.dispatchEvent(event);
+    }
+    clearModifiers();focusFrame(frame);return true;
+  }catch{return false}
+}
+
+function handleLatchedKey(event){
+  if(event.termdockToolbarKey||(!modifiers.ctrl&&!modifiers.alt)||["Control","Alt","Shift","Meta"].includes(event.key))return;
+  event.preventDefault();event.stopImmediatePropagation();
+  suppressInputOnce=true;setTimeout(()=>{suppressInputOnce=false},0);
+  emitTerminalKey(event.key,event.code,event.keyCode||event.which||0,{ctrlKey:modifiers.ctrl||event.ctrlKey,altKey:modifiers.alt||event.altKey});
+}
+
+function handleLatchedInput(event){
+  if(suppressInputOnce){event.preventDefault();event.stopImmediatePropagation();suppressInputOnce=false;return}
+  if((!modifiers.ctrl&&!modifiers.alt)||!event.data)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  const key=event.data[0];
+  const upper=key.toUpperCase();
+  emitTerminalKey(key,/^[A-Z]$/.test(upper)?`Key${upper}`:"",upper.charCodeAt(0));
 }
 
 function installTouchScroll(frame){
@@ -82,13 +128,13 @@ function ensureFrame(id){
   if(frame)return frame;
   frame=document.createElement("iframe");
   frame.dataset.id=id;frame.title="SSH terminal";frame.allow="clipboard-read; clipboard-write";frame.src=terminalUrl(id);
-  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);installTouchScroll(frame);setTimeout(()=>installTouchScroll(frame),250);setTimeout(()=>installTouchScroll(frame),1000)}catch{}if(id===active)focusFrame(frame)});
+  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installTouchScroll(frame);setTimeout(()=>installTouchScroll(frame),250);setTimeout(()=>installTouchScroll(frame),1000)}catch{}if(id===active)focusFrame(frame)});
   frames.set(id,frame);viewsNode.append(frame);return frame;
 }
 
 function activate(id,reload=false){
   if(!tabs.some(tab=>tab.id===id))id=tabs[0]?.id||"main";
-  active=id;localStorage.setItem("termdock-active",id);render();
+  active=id;localStorage.setItem("termdock-active",id);clearModifiers();render();
   const frame=ensureFrame(id);
   if(reload)frame.src=terminalUrl(id);
   frames.forEach((item,frameId)=>{item.hidden=frameId!==id});focusFrame(frame);
@@ -133,6 +179,15 @@ tabsNode.addEventListener("click",async event=>{
       if(!tabs.length)await load();else activate(active===id?tabs[0].id:active);clearError();
     }catch(error){showError(error.message)}
   }else activate(id);
+});
+
+keybar.addEventListener("pointerdown",event=>{if(event.target.closest("button"))event.preventDefault()});
+keybar.addEventListener("click",event=>{
+  const button=event.target.closest("button");if(!button)return;
+  const modifier=button.dataset.modifier;
+  if(modifier){modifiers[modifier]=!modifiers[modifier];renderModifiers();focusFrame(frames.get(active));return}
+  if(button.dataset.key==="tab")emitTerminalKey("Tab","Tab",9);
+  if(button.dataset.key==="clear")emitTerminalKey("l","KeyL",76,{ctrlKey:true,altKey:false});
 });
 
 document.addEventListener("keydown",handleShortcut,true);

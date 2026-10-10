@@ -31,6 +31,8 @@ and defaults to loopback-only networking.
 - **Phone-friendly terminal:** two-finger drag scrolls xterm history without
   taking over ordinary one-finger taps, and the layout follows the visual
   viewport when Android's software keyboard opens.
+- **Permanent extra-key bar:** compact Ctrl and Alt latches plus immediate Tab
+  and Clear keys stay directly below the terminal without stealing focus.
 - **Server-saved tab registry:** reopen the page from another authorized browser
   and see the same workspace list.
 - **SSH key authentication:** the terminal launcher always uses a configured
@@ -244,6 +246,9 @@ must remain loopback-only behind TermDock.
 | `Reconnect view` | Reload only the active ttyd view; the shell remains in tmux |
 | `×` on a tab | Confirm, then end that tab's tmux session |
 | Two-finger vertical drag | Scroll terminal history on a touch screen |
+| Ctrl or Alt button | Latch that modifier for the next typed key; tap again to cancel |
+| Tab button | Send Tab, including a currently latched Ctrl or Alt modifier |
+| Clear button | Send Ctrl+L to redraw the current terminal screen |
 
 The shortcut listener runs in the iframe window's capture phase so xterm cannot
 consume Alt+number first. The handled keystroke is stopped before it can reach
@@ -254,6 +259,12 @@ One-finger interaction is left to xterm for focusing, selecting, and typing.
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very
 short viewports, the helper caption is hidden to preserve working terminal rows.
+
+The permanent key bar sits immediately below the terminal. Ctrl and Alt show a
+highlighted latched state and reset after the next key. Tapping a toolbar button
+does not take input focus away from xterm, avoiding unnecessary Android keyboard
+close/reopen cycles. Clear is equivalent to Ctrl+L; it redraws the shell screen
+but does not delete tmux history, scrollback, commands, or the session.
 
 ## Configuration reference
 

@@ -19,6 +19,12 @@
     </header>
     <nav class="tabs" id="tabs" aria-label="SSH terminal tabs"></nav>
     <section class="terminal" id="terminal-views" aria-label="Active SSH terminal"></section>
+    <div class="keybar" id="keybar" role="toolbar" aria-label="Terminal keys">
+      <button type="button" data-modifier="ctrl" aria-pressed="false">Ctrl</button>
+      <button type="button" data-modifier="alt" aria-pressed="false">Alt</button>
+      <button type="button" data-key="tab">Tab</button>
+      <button type="button" data-key="clear">Clear</button>
+    </div>
     <p class="note" id="note">Use <strong>Alt+1–9</strong> to switch tabs (<strong>Alt+0</strong> selects tab 10); missing numbered tabs are created automatically. On phones, drag with <strong>two fingers</strong> to scroll terminal history. Opened views stay connected for instant switching. Closing a tab explicitly ends only that tmux-backed SSH session.</p>
   </main>
   <script src="/static/app.js" defer></script>

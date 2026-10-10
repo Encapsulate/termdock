@@ -1,4 +1,40 @@
+ .keybar {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 5px;
+  padding-top: 6px;
+}
+
+.keybar button {
+  min-width: 48px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #07130c;
+  color: #a9cdb7;
+  font: 600 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  cursor: pointer;
+}
+
+.keybar button:hover,
+.keybar button:focus-visible,
+.keybar button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: #0c2115;
+  color: #e3ffed;
+}
+
+.keybar button[aria-pressed="true"] {
+  box-shadow: inset 0 -2px var(--green), 0 0 8px #37ef8833;
+}
+
 @media (max-width: 650px) {
+  .keybar {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
   body.compact-mobile .tag,
   body.compact-mobile .note {
     display: none !important;
