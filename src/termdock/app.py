@@ -72,7 +72,7 @@ async def index(request: web.Request) -> web.Response:
 
 async def asset(request: web.Request) -> web.Response:
     name = request.match_info["name"]
-    if name not in {"app.js", "style.css"}:
+    if name not in {"app.js", "style.css", "mobile.css"}:
         raise web.HTTPNotFound()
     path = files("termdock").joinpath(f"static/{name}")
     content_type = "application/javascript" if name.endswith(".js") else "text/css"

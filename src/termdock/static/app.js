@@ -40,12 +40,49 @@ function focusFrame(frame){
   requestAnimationFrame(()=>{try{frame.contentWindow.focus();frame.contentDocument.querySelector(".xterm-helper-textarea")?.focus()}catch{}});
 }
 
+function installTouchScroll(frame){
+  try{
+    const doc=frame.contentDocument;
+    const win=frame.contentWindow;
+    const viewport=doc.querySelector(".xterm-viewport");
+    if(!viewport)return false;
+    if(doc.documentElement.dataset.termdockTouchScroll)return true;
+    doc.documentElement.dataset.termdockTouchScroll="true";
+    viewport.style.overscrollBehavior="contain";
+    viewport.style.webkitOverflowScrolling="touch";
+    let lastCenterY=null;
+    const centerY=touches=>Array.from(touches).reduce((sum,touch)=>sum+touch.clientY,0)/touches.length;
+    const reset=()=>{lastCenterY=null};
+    win.addEventListener("touchstart",event=>{
+      if(event.touches.length<2){reset();return}
+      lastCenterY=centerY(event.touches);
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("touchmove",event=>{
+      if(event.touches.length<2){reset();return}
+      const nextCenterY=centerY(event.touches);
+      if(lastCenterY!==null)viewport.scrollTop+=(lastCenterY-nextCenterY)*1.35;
+      lastCenterY=nextCenterY;
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("touchend",event=>{if(event.touches.length<2)reset()},{capture:true});
+    win.addEventListener("touchcancel",reset,{capture:true});
+    return true;
+  }catch{return false}
+}
+
+function syncViewportHeight(){
+  const height=window.visualViewport?.height||window.innerHeight;
+  document.documentElement.style.setProperty("--viewport-height",`${Math.round(height)}px`);
+  document.body.classList.toggle("compact-mobile",window.innerWidth<=650&&height<=560);
+}
+
 function ensureFrame(id){
   let frame=frames.get(id);
   if(frame)return frame;
   frame=document.createElement("iframe");
   frame.dataset.id=id;frame.title="SSH terminal";frame.allow="clipboard-read; clipboard-write";frame.src=terminalUrl(id);
-  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true)}catch{}if(id===active)focusFrame(frame)});
+  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);installTouchScroll(frame);setTimeout(()=>installTouchScroll(frame),250);setTimeout(()=>installTouchScroll(frame),1000)}catch{}if(id===active)focusFrame(frame)});
   frames.set(id,frame);viewsNode.append(frame);return frame;
 }
 
@@ -100,5 +137,9 @@ tabsNode.addEventListener("click",async event=>{
 
 document.addEventListener("keydown",handleShortcut,true);
 document.querySelector("#reconnect").addEventListener("click",()=>activate(active,true));
+syncViewportHeight();
+window.addEventListener("resize",syncViewportHeight);
+window.visualViewport?.addEventListener("resize",syncViewportHeight);
+window.visualViewport?.addEventListener("scroll",syncViewportHeight);
 load();
 setInterval(async()=>{try{const body=await requestJson("/api/tabs");tabs=body.tabs||tabs;render()}catch{}},15000);

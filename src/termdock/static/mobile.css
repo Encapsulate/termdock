@@ -1,0 +1,14 @@
+@media (max-width: 650px) {
+  body.compact-mobile .tag,
+  body.compact-mobile .note {
+    display: none !important;
+  }
+
+  body.compact-mobile .tabs {
+    margin-top: 6px !important;
+  }
+
+  body.compact-mobile .terminal {
+    min-height: 120px !important;
+  }
+}

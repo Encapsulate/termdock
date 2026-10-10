@@ -28,6 +28,9 @@ and defaults to loopback-only networking.
   keyboard focus.
 - **Automatic tab creation:** Alt+4 from a one-tab workspace creates tabs 2–4,
   selects tab 4, and focuses it.
+- **Phone-friendly terminal:** two-finger drag scrolls xterm history without
+  taking over ordinary one-finger taps, and the layout follows the visual
+  viewport when Android's software keyboard opens.
 - **Server-saved tab registry:** reopen the page from another authorized browser
   and see the same workspace list.
 - **SSH key authentication:** the terminal launcher always uses a configured
@@ -240,10 +243,17 @@ must remain loopback-only behind TermDock.
 | `+ New terminal` | Create and select the next terminal |
 | `Reconnect view` | Reload only the active ttyd view; the shell remains in tmux |
 | `×` on a tab | Confirm, then end that tab's tmux session |
+| Two-finger vertical drag | Scroll terminal history on a touch screen |
 
 The shortcut listener runs in the iframe window's capture phase so xterm cannot
 consume Alt+number first. The handled keystroke is stopped before it can reach
 the shell.
+
+On touch devices, TermDock reserves a two-finger vertical drag for scrollback.
+One-finger interaction is left to xterm for focusing, selecting, and typing.
+The page also follows the browser's visual viewport rather than the full layout
+viewport, keeping the terminal above an open Android software keyboard. On very
+short viewports, the helper caption is hidden to preserve working terminal rows.
 
 ## Configuration reference
 
@@ -437,6 +447,13 @@ channel. After confirming the change, remove only the obsolete entry from
 TermDock captures Alt+number while its page or xterm has focus, but a desktop
 environment or browser policy can reserve a shortcut before web content sees it.
 Change that operating-system shortcut or use the clickable tab strip.
+
+### Terminal history will not scroll on a phone
+
+Use a two-finger vertical drag inside the terminal. A one-finger drag remains
+available to xterm and the browser for normal terminal interaction. Scrollback
+is unavailable while a full-screen application has switched the terminal to
+its alternate screen unless that application provides its own history.
 
 ### A tab reappears after being closed
 

@@ -2,6 +2,12 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.1 — 2026-10-10
+
+- Added explicit two-finger terminal-history scrolling for touch devices while preserving one-finger terminal interaction.
+- Made the phone layout track the visual viewport so the active terminal stays fitted above Android's on-screen keyboard.
+- Compacted nonessential helper text automatically on short keyboard-sized viewports.
+
 ## 1.0.0 — 2026-10-10
 
 - Initial public release.

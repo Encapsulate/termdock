@@ -32,7 +32,20 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             headers = {"Authorization": f"Basic {token}"}
             page = await client.get("/", headers=headers)
             assert page.status == 200
-            assert "TERMDOCK" in await page.text()
+            page_text = await page.text()
+            assert "TERMDOCK" in page_text
+            assert "two fingers" in page_text
+            script = await client.get("/static/app.js", headers=headers)
+            assert script.status == 200
+            script_text = await script.text()
+            assert "installTouchScroll" in script_text
+            assert "visualViewport" in script_text
+            stylesheet = await client.get("/static/style.css", headers=headers)
+            assert stylesheet.status == 200
+            assert "--viewport-height" in await stylesheet.text()
+            mobile_styles = await client.get("/static/mobile.css", headers=headers)
+            assert mobile_styles.status == 200
+            assert "compact-mobile" in await mobile_styles.text()
             assert (await client.post("/api/tabs", headers=headers)).status == 403
             created = await client.post("/api/tabs", headers={**headers, "X-TermDock-Request": "1"})
             assert created.status == 201
