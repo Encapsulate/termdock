@@ -1,0 +1,10 @@
+include CHANGELOG.md
+include CONTRIBUTING.md
+include LICENSE
+include README.md
+include SECURITY.md
+include install.sh
+include uninstall.sh
+include termdock.env.example
+recursive-include scripts *.py
+recursive-include tests *.py

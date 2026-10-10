@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Persistent multi-tab SSH workspaces in your browser">
+  <title>TermDock · Persistent SSH workspaces</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main>
+    <header class="top">
+      <div>
+        <strong class="brand">TERMDOCK</strong>
+        <span class="tag">PERSISTENT SSH WORKSPACES</span>
+      </div>
+      <span class="session">SERVER-SAVED TABS <button id="reconnect" type="button">Reconnect view</button></span>
+    </header>
+    <nav class="tabs" id="tabs" aria-label="SSH terminal tabs"></nav>
+    <section class="terminal" id="terminal-views" aria-label="Active SSH terminal"></section>
+    <p class="note" id="note">Use <strong>Alt+1–9</strong> to switch tabs (<strong>Alt+0</strong> selects tab 10); missing numbered tabs are created automatically. Opened views stay connected for instant switching. Closing a tab explicitly ends only that tmux-backed SSH session.</p>
+  </main>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
