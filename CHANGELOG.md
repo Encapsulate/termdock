@@ -2,6 +2,12 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.4 — 2026-10-10
+
+- Made ordinary mouse drags create persistent, browser-native xterm selections even while tmux mouse support is enabled.
+- Preserved un-dragged mouse clicks for interactive terminal applications.
+- Added a compact Copy key that copies the active terminal selection, including from phone and tablet browsers.
+
 ## 1.0.3 — 2026-10-10
 
 - Increased both xterm and tmux history limits from their small defaults to 100,000 lines.

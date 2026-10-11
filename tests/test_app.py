@@ -38,11 +38,14 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert 'data-modifier="ctrl"' in page_text
             assert 'data-modifier="alt"' in page_text
             assert 'data-key="tab"' in page_text
+            assert 'data-key="copy"' in page_text
             assert 'data-key="clear"' in page_text
             script = await client.get("/static/app.js", headers=headers)
             assert script.status == 200
             script_text = await script.text()
             assert "installTouchScroll" in script_text
+            assert "installMouseSelection" in script_text
+            assert "copyTerminalSelection" in script_text
             assert "visualViewport" in script_text
             assert "emitTerminalKey" in script_text
             assert "WheelEvent" in script_text

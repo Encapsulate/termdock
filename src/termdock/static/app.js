@@ -124,6 +124,87 @@ function installTouchScroll(frame){
   }catch{return false}
 }
 
+function installMouseSelection(frame){
+  try{
+    const doc=frame.contentDocument;
+    const win=frame.contentWindow;
+    if(!doc.querySelector(".xterm"))return false;
+    if(doc.documentElement.dataset.termdockMouseSelection)return true;
+    doc.documentElement.dataset.termdockMouseSelection="true";
+    let pending=null;
+    let selecting=false;
+    let suppressClick=false;
+    const snapshot=event=>({
+      type:event.type,target:event.target,clientX:event.clientX,clientY:event.clientY,
+      screenX:event.screenX,screenY:event.screenY,button:event.button,buttons:event.buttons,
+      detail:event.detail||1,ctrlKey:event.ctrlKey,altKey:event.altKey,
+      metaKey:event.metaKey,shiftKey:event.shiftKey,
+    });
+    const dispatch=(source,target,forceSelection=false)=>{
+      const event=new win.MouseEvent(source.type,{
+        bubbles:true,cancelable:true,view:win,
+        clientX:source.clientX,clientY:source.clientY,screenX:source.screenX,screenY:source.screenY,
+        button:source.button,buttons:source.buttons,detail:source.detail,
+        ctrlKey:source.ctrlKey,altKey:source.altKey,metaKey:source.metaKey,
+        shiftKey:forceSelection||source.shiftKey,
+      });
+      Object.defineProperty(event,"termdockSelectionEvent",{value:true});
+      target.dispatchEvent(event);
+    };
+    win.addEventListener("mousedown",event=>{
+      if(event.termdockSelectionEvent||event.button!==0||event.shiftKey||!event.target.closest?.(".xterm"))return;
+      pending=snapshot(event);selecting=false;
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("mousemove",event=>{
+      if(!pending||event.termdockSelectionEvent)return;
+      if(!(event.buttons&1)){pending=null;selecting=false;return}
+      if(!selecting&&Math.hypot(event.clientX-pending.clientX,event.clientY-pending.clientY)>=4){
+        selecting=true;dispatch(pending,pending.target,true);
+      }
+      if(selecting)dispatch(snapshot(event),event.target,true);
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("mouseup",event=>{
+      if(!pending||event.termdockSelectionEvent)return;
+      event.preventDefault();event.stopImmediatePropagation();
+      const current=snapshot(event);
+      if(selecting){
+        dispatch(current,event.target,true);suppressClick=true;
+        setTimeout(()=>{suppressClick=false},0);
+      }else{
+        dispatch(pending,pending.target);dispatch(current,event.target);
+      }
+      pending=null;selecting=false;
+    },{capture:true,passive:false});
+    win.addEventListener("click",event=>{
+      if(!suppressClick)return;
+      suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
+    },true);
+    win.addEventListener("blur",()=>{pending=null;selecting=false});
+    return true;
+  }catch{return false}
+}
+
+function flashKey(button,label){
+  const original=button.dataset.label||button.textContent;
+  button.dataset.label=original;button.textContent=label;
+  clearTimeout(button.termdockFlashTimer);
+  button.termdockFlashTimer=setTimeout(()=>{button.textContent=original},1400);
+}
+
+async function copyTerminalSelection(button){
+  const frame=frames.get(active);
+  try{
+    const text=frame?.contentWindow.getSelection()?.toString()||"";
+    if(!text){flashKey(button,"Select text");return false}
+    try{await navigator.clipboard.writeText(text)}catch{
+      if(!frame.contentDocument.execCommand("copy"))throw new Error("copy failed");
+    }
+    flashKey(button,"Copied");return true;
+  }catch{flashKey(button,"Copy failed");return false}
+}
+
 function syncViewportHeight(){
   const height=window.visualViewport?.height||window.innerHeight;
   document.documentElement.style.setProperty("--viewport-height",`${Math.round(height)}px`);
@@ -135,7 +216,7 @@ function ensureFrame(id){
   if(frame)return frame;
   frame=document.createElement("iframe");
   frame.dataset.id=id;frame.title="SSH terminal";frame.allow="clipboard-read; clipboard-write";frame.src=terminalUrl(id);
-  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installTouchScroll(frame);setTimeout(()=>installTouchScroll(frame),250);setTimeout(()=>installTouchScroll(frame),1000)}catch{}if(id===active)focusFrame(frame)});
+  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installTouchScroll(frame);installMouseSelection(frame);setTimeout(()=>{installTouchScroll(frame);installMouseSelection(frame)},250);setTimeout(()=>{installTouchScroll(frame);installMouseSelection(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
   frames.set(id,frame);viewsNode.append(frame);return frame;
 }
 
@@ -189,11 +270,12 @@ tabsNode.addEventListener("click",async event=>{
 });
 
 keybar.addEventListener("pointerdown",event=>{if(event.target.closest("button"))event.preventDefault()});
-keybar.addEventListener("click",event=>{
+keybar.addEventListener("click",async event=>{
   const button=event.target.closest("button");if(!button)return;
   const modifier=button.dataset.modifier;
   if(modifier){modifiers[modifier]=!modifiers[modifier];renderModifiers();focusFrame(frames.get(active));return}
   if(button.dataset.key==="tab")emitTerminalKey("Tab","Tab",9);
+  if(button.dataset.key==="copy")await copyTerminalSelection(button);
   if(button.dataset.key==="clear")emitTerminalKey("l","KeyL",76,{ctrlKey:true,altKey:false});
 });
 
