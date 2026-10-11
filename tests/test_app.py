@@ -37,6 +37,7 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "two fingers" in page_text
             assert 'data-modifier="ctrl"' in page_text
             assert 'data-modifier="alt"' in page_text
+            assert 'data-modifier="shift"' in page_text
             assert 'data-key="tab"' in page_text
             assert 'data-key="copy"' in page_text
             assert 'data-key="clear"' in page_text
@@ -50,6 +51,9 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert 'touchAction="none"' in script_text
             assert "visualViewport" in script_text
             assert "emitTerminalKey" in script_text
+            assert "modifierLocks" in script_text
+            assert "event.detail>=2" in script_text
+            assert 'addEventListener("contextmenu"' in script_text
             assert "WheelEvent" in script_text
             stylesheet = await client.get("/static/style.css", headers=headers)
             assert stylesheet.status == 200

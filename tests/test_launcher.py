@@ -40,4 +40,7 @@ def test_tmux_config_keeps_deep_history_and_reserves_wheel() -> None:
     assert "history-limit 100000" in config
     assert "mouse on" in config
     assert "WheelUpPane" in config
+    assert "set-clipboard on" in config
+    assert config.count("MouseDragEnd1Pane") == 2
+    assert config.count("copy-selection-no-clear") == 2
     assert "mouse_any_flag" not in config

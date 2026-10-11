@@ -9,7 +9,8 @@ let tabs=[];
 let active=localStorage.getItem("termdock-active")||"main";
 let shortcutTask=null;
 let suppressInputOnce=false;
-const modifiers={ctrl:false,alt:false};
+const modifiers={ctrl:false,alt:false,shift:false};
+const modifierLocks={ctrl:false,alt:false,shift:false};
 
 const esc=value=>String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
 const terminalUrl=id=>`/console/?arg=${encodeURIComponent(id)}`;
@@ -45,12 +46,17 @@ function focusFrame(frame){
 }
 
 function renderModifiers(){
-  keybar.querySelector('[data-modifier="ctrl"]').setAttribute("aria-pressed",String(modifiers.ctrl));
-  keybar.querySelector('[data-modifier="alt"]').setAttribute("aria-pressed",String(modifiers.alt));
+  for(const name of Object.keys(modifiers)){
+    const button=keybar.querySelector(`[data-modifier="${name}"]`);
+    button.setAttribute("aria-pressed",String(modifiers[name]));
+    button.dataset.locked=String(modifierLocks[name]);
+    button.title=modifierLocks[name]?`${button.textContent} is locked; press again to release`:`Click to latch; double-click to lock`;
+  }
 }
 
 function clearModifiers(){
-  modifiers.ctrl=false;modifiers.alt=false;renderModifiers();
+  for(const name of Object.keys(modifiers))if(!modifierLocks[name])modifiers[name]=false;
+  renderModifiers();
 }
 
 function emitTerminalKey(key,code,keyCode,forced={}){
@@ -61,8 +67,9 @@ function emitTerminalKey(key,code,keyCode,forced={}){
     if(!target)return false;
     const ctrlKey=forced.ctrlKey??modifiers.ctrl;
     const altKey=forced.altKey??modifiers.alt;
+    const shiftKey=forced.shiftKey??modifiers.shift;
     for(const type of ["keydown","keyup"]){
-      const event=new win.KeyboardEvent(type,{key,code,ctrlKey,altKey,bubbles:true,cancelable:true});
+      const event=new win.KeyboardEvent(type,{key,code,ctrlKey,altKey,shiftKey,bubbles:true,cancelable:true});
       Object.defineProperties(event,{keyCode:{get:()=>keyCode},which:{get:()=>keyCode},termdockToolbarKey:{value:true}});
       target.dispatchEvent(event);
     }
@@ -71,15 +78,15 @@ function emitTerminalKey(key,code,keyCode,forced={}){
 }
 
 function handleLatchedKey(event){
-  if(event.termdockToolbarKey||(!modifiers.ctrl&&!modifiers.alt)||["Control","Alt","Shift","Meta"].includes(event.key))return;
+  if(event.termdockToolbarKey||(!modifiers.ctrl&&!modifiers.alt&&!modifiers.shift)||["Control","Alt","Shift","Meta"].includes(event.key))return;
   event.preventDefault();event.stopImmediatePropagation();
   suppressInputOnce=true;setTimeout(()=>{suppressInputOnce=false},0);
-  emitTerminalKey(event.key,event.code,event.keyCode||event.which||0,{ctrlKey:modifiers.ctrl||event.ctrlKey,altKey:modifiers.alt||event.altKey});
+  emitTerminalKey(event.key,event.code,event.keyCode||event.which||0,{ctrlKey:modifiers.ctrl||event.ctrlKey,altKey:modifiers.alt||event.altKey,shiftKey:modifiers.shift||event.shiftKey});
 }
 
 function handleLatchedInput(event){
   if(suppressInputOnce){event.preventDefault();event.stopImmediatePropagation();suppressInputOnce=false;return}
-  if((!modifiers.ctrl&&!modifiers.alt)||!event.data)return;
+  if((!modifiers.ctrl&&!modifiers.alt&&!modifiers.shift)||!event.data)return;
   event.preventDefault();event.stopImmediatePropagation();
   const key=event.data[0];
   const upper=key.toUpperCase();
@@ -133,18 +140,9 @@ function installMouseSelection(frame){
     if(doc.documentElement.dataset.termdockMouseSelection)return true;
     doc.documentElement.dataset.termdockMouseSelection="true";
     terminal.style.touchAction="none";
-    let pending=null;
-    let selecting=false;
-    let suppressClickUntil=0;
     let ignoreMouseUntil=0;
     let touchPending=null;
     let touchSelecting=false;
-    const snapshot=event=>({
-      type:event.type,target:event.target,clientX:event.clientX,clientY:event.clientY,
-      screenX:event.screenX,screenY:event.screenY,button:event.button,buttons:event.buttons,
-      detail:event.detail||1,ctrlKey:event.ctrlKey,altKey:event.altKey,
-      metaKey:event.metaKey,shiftKey:event.shiftKey,
-    });
     const dispatch=(source,target,forceSelection=false)=>{
       const event=new win.MouseEvent(source.type,{
         bubbles:true,cancelable:true,view:win,
@@ -156,38 +154,18 @@ function installMouseSelection(frame){
       Object.defineProperty(event,"termdockSelectionEvent",{value:true});
       target.dispatchEvent(event);
     };
-    win.addEventListener("mousedown",event=>{
-      if(Date.now()<ignoreMouseUntil){event.preventDefault();event.stopImmediatePropagation();return}
-      if(event.termdockSelectionEvent||event.button!==0||event.shiftKey||!event.target.closest?.(".xterm"))return;
-      pending=snapshot(event);selecting=false;
-      event.preventDefault();event.stopImmediatePropagation();
-    },{capture:true,passive:false});
-    win.addEventListener("mousemove",event=>{
-      if(Date.now()<ignoreMouseUntil&&!event.termdockSelectionEvent){event.preventDefault();event.stopImmediatePropagation();return}
-      if(!pending||event.termdockSelectionEvent)return;
-      if(!(event.buttons&1)){pending=null;selecting=false;return}
-      if(!selecting&&Math.hypot(event.clientX-pending.clientX,event.clientY-pending.clientY)>=4){
-        selecting=true;dispatch(pending,pending.target,true);
-      }
-      if(selecting)dispatch(snapshot(event),event.target,true);
-      event.preventDefault();event.stopImmediatePropagation();
-    },{capture:true,passive:false});
-    win.addEventListener("mouseup",event=>{
-      if(Date.now()<ignoreMouseUntil&&!event.termdockSelectionEvent){event.preventDefault();event.stopImmediatePropagation();return}
-      if(!pending||event.termdockSelectionEvent)return;
-      event.preventDefault();event.stopImmediatePropagation();
-      const current=snapshot(event);
-      if(selecting){
-        dispatch(current,event.target,true);suppressClickUntil=Date.now()+800;
-      }else{
-        dispatch(pending,pending.target);dispatch(current,event.target);
-      }
-      pending=null;selecting=false;
-    },{capture:true,passive:false});
-    win.addEventListener("click",event=>{
-      if(Date.now()>suppressClickUntil)return;
-      event.preventDefault();event.stopImmediatePropagation();
-    },true);
+    // Desktop mouse events must reach ttyd/tmux unchanged. tmux owns the
+    // selection and keeps it highlighted after release. This bridge exists
+    // only to translate one-finger touch gestures into selection events.
+    for(const type of ["mousedown","mousemove","mouseup","click"]){
+      win.addEventListener(type,event=>{
+        if(Date.now()>=ignoreMouseUntil||event.termdockSelectionEvent)return;
+        event.preventDefault();event.stopImmediatePropagation();
+      },{capture:true,passive:false});
+    }
+    // Keep right-button events available to the terminal while suppressing
+    // the browser's unrelated context-menu popup over the terminal canvas.
+    win.addEventListener("contextmenu",event=>event.preventDefault(),{capture:true});
     const fromTouch=(type,touch,target,buttons)=>({
       type,target,clientX:touch.clientX,clientY:touch.clientY,
       screenX:touch.screenX,screenY:touch.screenY,button:0,buttons,detail:1,
@@ -217,7 +195,7 @@ function installMouseSelection(frame){
       const target=doc.elementFromPoint(touch.clientX,touch.clientY)||touchPending.target;
       const current=fromTouch("mouseup",touch,target,0);
       if(touchSelecting){
-        dispatch(current,target,true);suppressClickUntil=Date.now()+800;
+        dispatch(current,target,true);
       }else{
         dispatch(touchPending,touchPending.target);dispatch(current,target);
         doc.querySelector(".xterm-helper-textarea")?.focus();
@@ -226,7 +204,7 @@ function installMouseSelection(frame){
       event.preventDefault();event.stopImmediatePropagation();
     },{capture:true,passive:false});
     win.addEventListener("touchcancel",resetTouch,{capture:true});
-    win.addEventListener("blur",()=>{pending=null;selecting=false;resetTouch()});
+    win.addEventListener("blur",resetTouch);
     return true;
   }catch{return false}
 }
@@ -241,7 +219,8 @@ function flashKey(button,label){
 async function copyTerminalSelection(button){
   const frame=frames.get(active);
   try{
-    const text=frame?.contentWindow.getSelection()?.toString()||"";
+    let text=frame?.contentWindow.getSelection()?.toString()||"";
+    if(!text)text=(await requestJson(`/api/tabs/${encodeURIComponent(active)}/selection`)).text||"";
     if(!text){flashKey(button,"Select text");return false}
     try{await navigator.clipboard.writeText(text)}catch{
       if(!frame.contentDocument.execCommand("copy"))throw new Error("copy failed");
@@ -315,13 +294,19 @@ tabsNode.addEventListener("click",async event=>{
 });
 
 keybar.addEventListener("pointerdown",event=>{if(event.target.closest("button"))event.preventDefault()});
+keybar.addEventListener("dblclick",event=>{if(event.target.closest("[data-modifier]"))event.preventDefault()});
 keybar.addEventListener("click",async event=>{
   const button=event.target.closest("button");if(!button)return;
   const modifier=button.dataset.modifier;
-  if(modifier){modifiers[modifier]=!modifiers[modifier];renderModifiers();focusFrame(frames.get(active));return}
+  if(modifier){
+    if(event.detail>=2){modifiers[modifier]=true;modifierLocks[modifier]=true}
+    else if(modifierLocks[modifier]){modifiers[modifier]=false;modifierLocks[modifier]=false}
+    else modifiers[modifier]=!modifiers[modifier];
+    renderModifiers();focusFrame(frames.get(active));return;
+  }
   if(button.dataset.key==="tab")emitTerminalKey("Tab","Tab",9);
   if(button.dataset.key==="copy")await copyTerminalSelection(button);
-  if(button.dataset.key==="clear")emitTerminalKey("l","KeyL",76,{ctrlKey:true,altKey:false});
+  if(button.dataset.key==="clear")emitTerminalKey("l","KeyL",76,{ctrlKey:true,altKey:false,shiftKey:false});
 });
 
 document.addEventListener("keydown",handleShortcut,true);

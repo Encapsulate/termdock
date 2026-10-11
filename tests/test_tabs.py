@@ -33,3 +33,25 @@ def test_invalid_delete_never_reaches_tmux(tmp_path: Path) -> None:
             return
         raise AssertionError("invalid identifier was accepted")
     asyncio.run(exercise())
+
+
+def test_selection_uses_session_specific_tmux_buffer(tmp_path: Path) -> None:
+    store = TabStore(tmp_path, "/bin/false", "test-socket", "termdock")
+    calls: list[tuple[str, ...]] = []
+
+    async def fake_tmux(*arguments: str) -> tuple[int, str, str]:
+        calls.append(arguments)
+        if arguments[0] == "list-buffers":
+            return 0, "termdock-termdock-abc123abc123-7\nbuffer6\n", ""
+        return 0, "selected text", ""
+
+    store._tmux = fake_tmux  # type: ignore[method-assign]
+
+    async def exercise() -> None:
+        assert await store.selection("abc123abc123") == "selected text"
+
+    asyncio.run(exercise())
+    assert calls == [
+        ("list-buffers", "-F", "#{buffer_name}"),
+        ("save-buffer", "-b", "termdock-termdock-abc123abc123-7", "-"),
+    ]

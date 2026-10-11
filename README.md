@@ -33,10 +33,11 @@ and defaults to loopback-only networking.
   viewport when Android's software keyboard opens.
 - **Deep, application-proof scrollback:** xterm and tmux retain up to 100,000
   lines, and the wheel scrolls pane history instead of an inner chat/TUI.
-- **Permanent extra-key bar:** compact Ctrl and Alt latches plus immediate Tab
-  and Clear keys stay directly below the terminal without stealing focus.
-- **Reliable selection and copy:** mouse drags and one-finger phone drags select
-  xterm text instead of disappearing into tmux mouse mode; Copy uses that selection.
+- **Permanent extra-key bar:** compact Ctrl, Alt, and Shift latches plus immediate
+  Tab and Clear keys stay directly below the terminal without stealing focus.
+- **Reliable selection and copy:** desktop mouse drags pass directly to tmux and
+  stay highlighted after release; one-finger phone drags use xterm selection.
+  Copy understands both paths.
 - **Server-saved tab registry:** reopen the page from another authorized browser
   and see the same workspace list.
 - **SSH key authentication:** the terminal launcher always uses a configured
@@ -251,8 +252,8 @@ must remain loopback-only behind TermDock.
 | `×` on a tab | Confirm, then end that tab's tmux session |
 | Mouse wheel or two-finger vertical drag | Scroll persistent tmux pane history, including behind a full-screen TUI |
 | Mouse drag or one-finger drag across terminal text | Create a persistent browser selection, even while tmux mouse mode is active |
-| Ctrl or Alt button | Latch that modifier for the next typed key; tap again to cancel |
-| Tab button | Send Tab, including a currently latched Ctrl or Alt modifier |
+| Ctrl, Alt, or Shift button | Click to latch for one key; double-click to lock across keys; click a locked modifier to release it |
+| Tab button | Send Tab, including currently active modifiers |
 | Copy button | Copy the active terminal selection to the browser clipboard |
 | Clear button | Send Ctrl+L to redraw the current terminal screen |
 
@@ -268,19 +269,27 @@ normal live-terminal behavior. Both tmux and xterm are configured for 100,000
 lines; changing that limit does not retroactively recover lines already evicted
 before the setting was enabled.
 
-Tmux mouse mode normally captures a drag and clears its highlight on release.
-TermDock distinguishes taps/clicks from drags: a simple tap or click is still
-forwarded to the terminal application, while one-finger or mouse movement beyond
-a small threshold activates xterm's browser-native selection path. The selected
-text remains highlighted and can be copied with the Copy key or the browser's
-normal copy command. Two fingers remain reserved for scrolling history.
+On touchscreens, TermDock distinguishes taps from drags: a simple tap is still
+forwarded to the terminal application, while one-finger movement beyond a small
+threshold activates xterm's browser-native selection path. The selected text
+remains highlighted and can be copied with the Copy key or the browser's normal
+copy command. Two fingers remain reserved for scrolling history.
+
+On desktop, real mouse events pass through to ttyd and tmux unchanged. tmux's
+mouse-release binding uses `copy-selection-no-clear` in both emacs and vi copy
+modes, so the selected region remains visible after the button is released.
+The Copy button reads the browser selection first and then falls back to the
+current tab's retained tmux selection. Right-button events also continue to the
+terminal while the browser's own context-menu popup is suppressed over the
+terminal canvas.
 
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very
 short viewports, the helper caption is hidden to preserve working terminal rows.
 
-The permanent key bar sits immediately below the terminal. Ctrl and Alt show a
-highlighted latched state and reset after the next key. Copy uses the active
+The permanent key bar sits immediately below the terminal. Ctrl, Alt, and Shift
+show a highlighted latched state and reset after the next key; double-clicking
+locks a modifier until it is pressed again. Copy uses the active
 xterm selection. Tapping a toolbar button does not take input focus away from
 xterm, avoiding unnecessary Android keyboard close/reopen cycles. Clear is
 equivalent to Ctrl+L; it redraws the shell screen but does not delete tmux

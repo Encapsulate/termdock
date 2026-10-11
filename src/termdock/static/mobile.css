@@ -29,6 +29,11 @@
   box-shadow: inset 0 -2px var(--green), 0 0 8px #37ef8833;
 }
 
+.keybar button[data-locked="true"] {
+  outline: 1px solid #baffd5;
+  outline-offset: -3px;
+}
+
 @media (max-width: 650px) {
   .keybar {
     justify-content: flex-start;

@@ -2,6 +2,16 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.6 — 2026-10-10
+
+- Added a tmux-level desktop fallback that keeps mouse-drag selections highlighted after release instead of running the default copy-and-cancel action.
+- Applied the persistent mouse-release binding to both emacs and vi copy-mode key tables.
+- Enabled tmux clipboard export so a completed fallback selection is copied without discarding its highlight.
+- Removed the portal's synthetic desktop mouse-event bridge so real PC drags reach ttyd and tmux unchanged; the bridge remains limited to touch input.
+- Added a server-backed Copy fallback that retrieves the current tab's retained tmux selection when no browser selection exists.
+- Suppressed the browser context-menu popup inside the terminal without blocking right-button events from reaching the terminal.
+- Added a Shift key beside Ctrl and Alt. A single click latches any modifier for the next key, a double-click locks it across keys, and pressing a locked modifier again releases it.
+
 ## 1.0.5 — 2026-10-10
 
 - Fixed the phone-specific gap in 1.0.4 by translating one-finger terminal drags into persistent xterm selections.

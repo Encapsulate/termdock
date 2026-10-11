@@ -117,3 +117,22 @@ class TabStore:
             registry = self._load()
             registry["tabs"].pop(tab_id, None)
             self._save(registry)
+
+    async def selection(self, tab_id: str) -> str:
+        session = self.session_name(tab_id)
+        prefix = f"termdock-{session}-"
+        async with self.lock:
+            code, names, stderr = await self._tmux("list-buffers", "-F", "#{buffer_name}")
+            buffer_name = next((name for name in names.splitlines() if name.startswith(prefix)), "")
+            if code == 0 and buffer_name:
+                code, stdout, stderr = await self._tmux("save-buffer", "-b", buffer_name, "-")
+            else:
+                stdout = ""
+        if code:
+            lowered = stderr.lower()
+            if "no buffer" in lowered or "can't find buffer" in lowered:
+                return ""
+            raise RuntimeError(stderr.strip() or "unable to read terminal selection")
+        if len(stdout.encode("utf-8")) > 4 * 1024 * 1024:
+            raise RuntimeError("terminal selection is too large to copy")
+        return stdout if buffer_name else ""
