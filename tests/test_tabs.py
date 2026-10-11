@@ -42,7 +42,7 @@ def test_selection_uses_session_specific_tmux_buffer(tmp_path: Path) -> None:
     async def fake_tmux(*arguments: str) -> tuple[int, str, str]:
         calls.append(arguments)
         if arguments[0] == "list-buffers":
-            return 0, "termdock-termdock-abc123abc123-7\nbuffer6\n", ""
+            return 0, "termdock-termdock-abc123abc123-extra-8\ntermdock-termdock-abc123abc123-7\nbuffer6\n", ""
         return 0, "selected text", ""
 
     store._tmux = fake_tmux  # type: ignore[method-assign]

@@ -41,6 +41,13 @@ function handleShortcut(event){
   if(tabs[index])activate(tabs[index].id);else openShortcut(index);
 }
 
+function handleCopyShortcut(event){
+  if(event.termdockToolbarKey||!event.ctrlKey||!event.shiftKey||event.altKey||event.metaKey)return;
+  if((event.code||"")!=="KeyC"&&(event.key||"").toLowerCase()!=="c")return;
+  event.preventDefault();event.stopImmediatePropagation();
+  void copyTerminalSelection(keybar.querySelector('[data-key="copy"]'));
+}
+
 function focusFrame(frame){
   requestAnimationFrame(()=>{try{frame.contentWindow.focus();frame.contentDocument.querySelector(".xterm-helper-textarea")?.focus()}catch{}});
 }
@@ -222,11 +229,22 @@ async function copyTerminalSelection(button){
     let text=frame?.contentWindow.getSelection()?.toString()||"";
     if(!text)text=(await requestJson(`/api/tabs/${encodeURIComponent(active)}/selection`)).text||"";
     if(!text){flashKey(button,"Select text");return false}
-    try{await navigator.clipboard.writeText(text)}catch{
-      if(!frame.contentDocument.execCommand("copy"))throw new Error("copy failed");
-    }
+    await writeClipboard(text,frame);
     flashKey(button,"Copied");return true;
   }catch{flashKey(button,"Copy failed");return false}
+}
+
+async function writeClipboard(text,frame){
+  try{
+    if(!navigator.clipboard?.writeText)throw new Error("clipboard API unavailable");
+    await navigator.clipboard.writeText(text);return;
+  }catch{}
+  const field=document.createElement("textarea");
+  field.value=text;field.readOnly=true;
+  field.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";
+  document.body.append(field);field.focus({preventScroll:true});field.select();
+  const copied=document.execCommand("copy");field.remove();focusFrame(frame);
+  if(!copied)throw new Error("copy failed");
 }
 
 function syncViewportHeight(){
@@ -240,7 +258,7 @@ function ensureFrame(id){
   if(frame)return frame;
   frame=document.createElement("iframe");
   frame.dataset.id=id;frame.title="SSH terminal";frame.allow="clipboard-read; clipboard-write";frame.src=terminalUrl(id);
-  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installMouseSelection(frame);installTouchScroll(frame);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},250);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
+  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleCopyShortcut,true);frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installMouseSelection(frame);installTouchScroll(frame);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},250);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
   frames.set(id,frame);viewsNode.append(frame);return frame;
 }
 
@@ -310,6 +328,7 @@ keybar.addEventListener("click",async event=>{
 });
 
 document.addEventListener("keydown",handleShortcut,true);
+document.addEventListener("keydown",handleCopyShortcut,true);
 document.querySelector("#reconnect").addEventListener("click",()=>activate(active,true));
 syncViewportHeight();
 window.addEventListener("resize",syncViewportHeight);

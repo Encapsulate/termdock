@@ -254,6 +254,7 @@ must remain loopback-only behind TermDock.
 | Mouse drag or one-finger drag across terminal text | Create a persistent browser selection, even while tmux mouse mode is active |
 | Ctrl, Alt, or Shift button | Click to latch for one key; double-click to lock across keys; click a locked modifier to release it |
 | Tab button | Send Tab, including currently active modifiers |
+| Ctrl+Shift+C | Copy the active browser or retained tmux selection |
 | Copy button | Copy the active terminal selection to the browser clipboard |
 | Clear button | Send Ctrl+L to redraw the current terminal screen |
 
@@ -279,9 +280,11 @@ On desktop, real mouse events pass through to ttyd and tmux unchanged. tmux's
 mouse-release binding uses `copy-selection-no-clear` in both emacs and vi copy
 modes, so the selected region remains visible after the button is released.
 The Copy button reads the browser selection first and then falls back to the
-current tab's retained tmux selection. Right-button events also continue to the
-terminal while the browser's own context-menu popup is suppressed over the
-terminal canvas.
+current tab's retained tmux selection. Ctrl+Shift+C uses the same path. When the
+modern Clipboard API is unavailable on an HTTP LAN origin, TermDock uses a
+temporary selected text field with the browser's legacy copy command. Right-button
+events also continue to the terminal while the browser's own context-menu popup
+is suppressed over the terminal canvas.
 
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very

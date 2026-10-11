@@ -120,10 +120,10 @@ class TabStore:
 
     async def selection(self, tab_id: str) -> str:
         session = self.session_name(tab_id)
-        prefix = f"termdock-{session}-"
+        pattern = re.compile(rf"termdock-{re.escape(session)}-\d+")
         async with self.lock:
             code, names, stderr = await self._tmux("list-buffers", "-F", "#{buffer_name}")
-            buffer_name = next((name for name in names.splitlines() if name.startswith(prefix)), "")
+            buffer_name = next((name for name in names.splitlines() if pattern.fullmatch(name)), "")
             if code == 0 and buffer_name:
                 code, stdout, stderr = await self._tmux("save-buffer", "-b", buffer_name, "-")
             else:

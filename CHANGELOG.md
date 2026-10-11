@@ -2,6 +2,12 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.7 — 2026-10-10
+
+- Fixed Copy on LAN HTTP origins where the modern Clipboard API is unavailable by selecting the retained text in a temporary textarea before invoking the legacy copy command.
+- Added Ctrl+Shift+C as a terminal-aware copy shortcut that uses the same browser-selection and server-selection fallback chain as the Copy button.
+- Tightened session-buffer matching so the main tab cannot accidentally read a similarly prefixed secondary tab's retained selection.
+
 ## 1.0.6 — 2026-10-10
 
 - Added a tmux-level desktop fallback that keeps mouse-drag selections highlighted after release instead of running the default copy-and-cancel action.
