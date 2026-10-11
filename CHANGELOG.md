@@ -2,6 +2,12 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.10 — 2026-10-11
+
+- Added permanent compact Arrow Up and Arrow Down buttons immediately after Clear in the terminal toolbar.
+- Arrow buttons emit real terminal keyboard events, preserve xterm focus, and honor any active Ctrl, Alt, or Shift latch.
+- Expanded the Android keyboard-open terminal by hiding the header/help, removing outer margins, and compacting the tab strip while retaining tabs and terminal keys.
+
 ## 1.0.9 — 2026-10-10
 
 - Replaced Android's inconsistent Shift+mouse touch bridge with direct xterm cell-range selection for one-finger drags.

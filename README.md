@@ -258,6 +258,7 @@ must remain loopback-only behind TermDock.
 | Ctrl+Shift+V | Paste normally, automatically leaving retained-selection mode first |
 | Copy button | Copy the active terminal selection to the browser clipboard |
 | Clear button | Send Ctrl+L to redraw the current terminal screen |
+| ↑ / ↓ buttons | Send Arrow Up or Arrow Down, including currently active modifiers |
 
 The shortcut listener runs in the iframe window's capture phase so xterm cannot
 consume Alt+number first. The handled keystroke is stopped before it can reach
@@ -296,6 +297,9 @@ the page.
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very
 short viewports, the helper caption is hidden to preserve working terminal rows.
+While the Android keyboard is open, TermDock also hides the header, removes
+outer margins, and compacts the tab strip so the shell receives most of the
+remaining viewport while tabs and terminal keys stay available.
 
 The permanent key bar sits immediately below the terminal. Ctrl, Alt, and Shift
 show a highlighted latched state and reset after the next key; double-clicking

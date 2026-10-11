@@ -10,6 +10,7 @@ let tabs=[];
 let active=localStorage.getItem("termdock-active")||"main";
 let shortcutTask=null;
 let suppressInputOnce=false;
+let tallestViewport=window.visualViewport?.height||window.innerHeight;
 const modifiers={ctrl:false,alt:false,shift:false};
 const modifierLocks={ctrl:false,alt:false,shift:false};
 
@@ -334,8 +335,10 @@ async function writeClipboard(text,frame){
 
 function syncViewportHeight(){
   const height=window.visualViewport?.height||window.innerHeight;
+  tallestViewport=Math.max(tallestViewport,height);
   document.documentElement.style.setProperty("--viewport-height",`${Math.round(height)}px`);
   document.body.classList.toggle("compact-mobile",window.innerWidth<=650&&height<=560);
+  document.body.classList.toggle("portal-keyboard-open",window.innerWidth<=650&&tallestViewport-height>150);
 }
 
 function ensureFrame(id){
@@ -410,6 +413,8 @@ keybar.addEventListener("click",async event=>{
   if(button.dataset.key==="tab")emitTerminalKey("Tab","Tab",9);
   if(button.dataset.key==="copy")await copyTerminalSelection(button);
   if(button.dataset.key==="clear")emitTerminalKey("l","KeyL",76,{ctrlKey:true,altKey:false,shiftKey:false});
+  if(button.dataset.key==="up")emitTerminalKey("ArrowUp","ArrowUp",38);
+  if(button.dataset.key==="down")emitTerminalKey("ArrowDown","ArrowDown",40);
 });
 
 document.addEventListener("keydown",handleShortcut,true);
@@ -420,5 +425,9 @@ syncViewportHeight();
 window.addEventListener("resize",syncViewportHeight);
 window.visualViewport?.addEventListener("resize",syncViewportHeight);
 window.visualViewport?.addEventListener("scroll",syncViewportHeight);
+window.addEventListener("orientationchange",()=>{
+  tallestViewport=window.visualViewport?.height||window.innerHeight;
+  setTimeout(syncViewportHeight,250);
+});
 load();
 setInterval(async()=>{try{const body=await requestJson("/api/tabs");tabs=body.tabs||tabs;render()}catch{}},15000);

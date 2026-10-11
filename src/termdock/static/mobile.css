@@ -40,6 +40,52 @@
     overflow-x: auto;
   }
 
+  .keybar button {
+    min-width: 42px;
+    padding-inline: 7px;
+  }
+
+  .keybar button[data-key="up"],
+  .keybar button[data-key="down"] {
+    min-width: 32px;
+    padding-inline: 5px;
+  }
+
+  body.portal-keyboard-open main {
+    width: 100%;
+    height: var(--viewport-height, 100dvh);
+    margin: 0;
+    padding: 3px;
+    border-inline: 0;
+  }
+
+  body.portal-keyboard-open .top,
+  body.portal-keyboard-open .note {
+    display: none !important;
+  }
+
+  body.portal-keyboard-open .tabs {
+    margin-top: 0 !important;
+    gap: 3px;
+  }
+
+  body.portal-keyboard-open .tabs .select {
+    padding: 5px 8px;
+  }
+
+  body.portal-keyboard-open .tabs .close,
+  body.portal-keyboard-open .new {
+    padding: 4px 7px;
+  }
+
+  body.portal-keyboard-open .terminal {
+    min-height: 0 !important;
+  }
+
+  body.portal-keyboard-open .keybar {
+    padding-top: 3px;
+  }
+
   body.compact-mobile .tag,
   body.compact-mobile .note {
     display: none !important;

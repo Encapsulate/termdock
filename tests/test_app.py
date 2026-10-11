@@ -41,6 +41,8 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert 'data-key="tab"' in page_text
             assert 'data-key="copy"' in page_text
             assert 'data-key="clear"' in page_text
+            assert 'data-key="up"' in page_text
+            assert 'data-key="down"' in page_text
             script = await client.get("/static/app.js", headers=headers)
             assert script.status == 200
             script_text = await script.text()
@@ -58,7 +60,11 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "touchPending" in script_text
             assert 'touchAction="none"' in script_text
             assert "visualViewport" in script_text
+            assert "tallestViewport" in script_text
+            assert 'classList.toggle("portal-keyboard-open"' in script_text
             assert "emitTerminalKey" in script_text
+            assert 'emitTerminalKey("ArrowUp","ArrowUp",38)' in script_text
+            assert 'emitTerminalKey("ArrowDown","ArrowDown",40)' in script_text
             assert "modifierLocks" in script_text
             assert "event.detail>=2" in script_text
             assert 'addEventListener("contextmenu"' in script_text
@@ -68,7 +74,9 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "--viewport-height" in await stylesheet.text()
             mobile_styles = await client.get("/static/mobile.css", headers=headers)
             assert mobile_styles.status == 200
-            assert "compact-mobile" in await mobile_styles.text()
+            mobile_text = await mobile_styles.text()
+            assert "compact-mobile" in mobile_text
+            assert "portal-keyboard-open" in mobile_text
             assert (await client.post("/api/tabs", headers=headers)).status == 403
             created = await client.post("/api/tabs", headers={**headers, "X-TermDock-Request": "1"})
             assert created.status == 201
