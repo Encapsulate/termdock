@@ -43,4 +43,6 @@ def test_tmux_config_keeps_deep_history_and_reserves_wheel() -> None:
     assert "set-clipboard on" in config
     assert config.count("MouseDragEnd1Pane") == 2
     assert config.count("copy-selection-no-clear") == 2
+    assert config.count("MouseDown3Pane display-menu -O") == 3
+    assert config.count("MouseUp3Pane") == 3
     assert "mouse_any_flag" not in config

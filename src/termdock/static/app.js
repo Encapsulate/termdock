@@ -5,6 +5,7 @@ const viewsNode=document.querySelector("#terminal-views");
 const note=document.querySelector("#note");
 const keybar=document.querySelector("#keybar");
 const frames=new Map();
+const selectionCache=new Map();
 let tabs=[];
 let active=localStorage.getItem("termdock-active")||"main";
 let shortcutTask=null;
@@ -46,6 +47,42 @@ function handleCopyShortcut(event){
   if((event.code||"")!=="KeyC"&&(event.key||"").toLowerCase()!=="c")return;
   event.preventDefault();event.stopImmediatePropagation();
   void copyTerminalSelection(keybar.querySelector('[data-key="copy"]'));
+}
+
+function handlePasteShortcut(event){
+  if(event.termdockToolbarKey||!event.ctrlKey||!event.shiftKey||event.altKey||event.metaKey)return;
+  if((event.code||"")!=="KeyV"&&(event.key||"").toLowerCase()!=="v")return;
+  // Keep Chrome's native paste default, but stop xterm's keydown handler from
+  // canceling it before the browser can emit the trusted paste event.
+  event.stopImmediatePropagation();
+}
+
+async function prepareTerminalPaste(event){
+  const text=event.clipboardData?.getData("text/plain")||"";
+  if(text){event.preventDefault();event.stopImmediatePropagation()}
+  const tabId=active;
+  try{
+    await fetch(`/api/tabs/${encodeURIComponent(tabId)}/prepare-paste`,{
+      method:"POST",headers:{"X-TermDock-Request":"1"}
+    });
+  }catch{return}
+  if(!text||active!==tabId)return;
+  const target=event.target;
+  if(!(target instanceof target.ownerDocument.defaultView.HTMLTextAreaElement))return;
+  const terminalWindow=target.ownerDocument.defaultView;
+  target.focus();
+  if(typeof terminalWindow.term?.paste==="function"){
+    terminalWindow.term.paste(text);return;
+  }
+  target.value=text;
+  target.dispatchEvent(new terminalWindow.InputEvent("input",{
+    bubbles:true,inputType:"insertFromPaste",data:text
+  }));
+  target.value="";
+}
+
+function openTerminalMenu(event){
+  event.preventDefault();event.stopImmediatePropagation();
 }
 
 function focusFrame(frame){
@@ -172,7 +209,13 @@ function installMouseSelection(frame){
     }
     // Keep right-button events available to the terminal while suppressing
     // the browser's unrelated context-menu popup over the terminal canvas.
-    win.addEventListener("contextmenu",event=>event.preventDefault(),{capture:true});
+    win.addEventListener("contextmenu",openTerminalMenu,true);
+    win.addEventListener("mousedown",event=>{
+      if(event.button===0)selectionCache.delete(active);
+    },{capture:true});
+    win.addEventListener("mouseup",event=>{
+      if(event.button===0)setTimeout(()=>{void cacheTerminalSelection(active)},40);
+    });
     const fromTouch=(type,touch,target,buttons)=>({
       type,target,clientX:touch.clientX,clientY:touch.clientY,
       screenX:touch.screenX,screenY:touch.screenY,button:0,buttons,detail:1,
@@ -226,25 +269,38 @@ function flashKey(button,label){
 async function copyTerminalSelection(button){
   const frame=frames.get(active);
   try{
-    let text=frame?.contentWindow.getSelection()?.toString()||"";
-    if(!text)text=(await requestJson(`/api/tabs/${encodeURIComponent(active)}/selection`)).text||"";
+    let text=frame?.contentWindow.getSelection()?.toString()||selectionCache.get(active)||"";
+    if(!text)text=await readTerminalSelection();
     if(!text){flashKey(button,"Select text");return false}
     await writeClipboard(text,frame);
     flashKey(button,"Copied");return true;
   }catch{flashKey(button,"Copy failed");return false}
 }
 
-async function writeClipboard(text,frame){
+async function cacheTerminalSelection(tabId){
   try{
-    if(!navigator.clipboard?.writeText)throw new Error("clipboard API unavailable");
-    await navigator.clipboard.writeText(text);return;
+    const text=await readTerminalSelection(tabId);
+    if(text)selectionCache.set(tabId,text);
   }catch{}
+}
+
+async function readTerminalSelection(tabId=active){
+  const response=await fetch(`/api/tabs/${encodeURIComponent(tabId)}/selection`,{
+    headers:{"X-TermDock-Request":"1"}
+  });
+  if(!response.ok)throw new Error("copy failed");
+  return (await response.json()).text||"";
+}
+
+async function writeClipboard(text,frame){
   const field=document.createElement("textarea");
   field.value=text;field.readOnly=true;
   field.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";
   document.body.append(field);field.focus({preventScroll:true});field.select();
   const copied=document.execCommand("copy");field.remove();focusFrame(frame);
-  if(!copied)throw new Error("copy failed");
+  if(copied)return;
+  if(window.isSecureContext&&navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return}
+  throw new Error("copy failed");
 }
 
 function syncViewportHeight(){
@@ -258,7 +314,7 @@ function ensureFrame(id){
   if(frame)return frame;
   frame=document.createElement("iframe");
   frame.dataset.id=id;frame.title="SSH terminal";frame.allow="clipboard-read; clipboard-write";frame.src=terminalUrl(id);
-  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleCopyShortcut,true);frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installMouseSelection(frame);installTouchScroll(frame);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},250);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
+  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleCopyShortcut,true);frame.contentWindow.addEventListener("keydown",handlePasteShortcut,true);frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);frame.contentWindow.addEventListener("paste",prepareTerminalPaste,true);installMouseSelection(frame);installTouchScroll(frame);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},250);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
   frames.set(id,frame);viewsNode.append(frame);return frame;
 }
 
@@ -329,6 +385,7 @@ keybar.addEventListener("click",async event=>{
 
 document.addEventListener("keydown",handleShortcut,true);
 document.addEventListener("keydown",handleCopyShortcut,true);
+document.addEventListener("keydown",handlePasteShortcut,true);
 document.querySelector("#reconnect").addEventListener("click",()=>activate(active,true));
 syncViewportHeight();
 window.addEventListener("resize",syncViewportHeight);

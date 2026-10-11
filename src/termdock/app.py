@@ -102,6 +102,18 @@ async def get_selection(request: web.Request) -> web.Response:
     return web.json_response({"text": text})
 
 
+async def prepare_paste(request: web.Request) -> web.Response:
+    require_mutation_header(request)
+    store = request.app[TABS_KEY]
+    try:
+        await store.prepare_paste(request.match_info["tab_id"])
+    except ValueError as exc:
+        raise web.HTTPBadRequest(text=f"{exc}\n") from exc
+    except RuntimeError as exc:
+        raise web.HTTPInternalServerError(text=f"{exc}\n") from exc
+    return web.json_response({"ok": True})
+
+
 async def delete_tab(request: web.Request) -> web.Response:
     require_mutation_header(request)
     store = request.app[TABS_KEY]
@@ -226,6 +238,7 @@ def create_app(config: Config, *, manage_ttyd: bool = True) -> web.Application:
     app.router.add_get("/api/tabs", list_tabs)
     app.router.add_post("/api/tabs", create_tab)
     app.router.add_get(r"/api/tabs/{tab_id:main|[a-f0-9]{12}}/selection", get_selection)
+    app.router.add_post(r"/api/tabs/{tab_id:main|[a-f0-9]{12}}/prepare-paste", prepare_paste)
     app.router.add_delete(r"/api/tabs/{tab_id:main|[a-f0-9]{12}}", delete_tab)
     app.router.add_route("*", "/console/{tail:.*}", proxy_console)
     if manage_ttyd:

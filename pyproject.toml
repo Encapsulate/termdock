@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "termdock"
-version = "1.0.7"
+version = "1.0.8"
 description = "Persistent, multi-tab SSH workspaces in your browser"
 readme = "README.md"
 requires-python = ">=3.10"

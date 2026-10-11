@@ -136,3 +136,14 @@ class TabStore:
         if len(stdout.encode("utf-8")) > 4 * 1024 * 1024:
             raise RuntimeError("terminal selection is too large to copy")
         return stdout if buffer_name else ""
+
+    async def prepare_paste(self, tab_id: str) -> None:
+        session = self.session_name(tab_id)
+        async with self.lock:
+            code, mode, stderr = await self._tmux("display-message", "-p", "-t", session, "#{pane_in_mode}")
+            if code:
+                raise RuntimeError(stderr.strip() or "unable to inspect terminal mode")
+            if mode.strip() == "1":
+                code, _, stderr = await self._tmux("send-keys", "-X", "-t", session, "cancel")
+                if code:
+                    raise RuntimeError(stderr.strip() or "unable to leave terminal copy mode")

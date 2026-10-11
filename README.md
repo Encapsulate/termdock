@@ -255,6 +255,7 @@ must remain loopback-only behind TermDock.
 | Ctrl, Alt, or Shift button | Click to latch for one key; double-click to lock across keys; click a locked modifier to release it |
 | Tab button | Send Tab, including currently active modifiers |
 | Ctrl+Shift+C | Copy the active browser or retained tmux selection |
+| Ctrl+Shift+V | Paste normally, automatically leaving retained-selection mode first |
 | Copy button | Copy the active terminal selection to the browser clipboard |
 | Clear button | Send Ctrl+L to redraw the current terminal screen |
 
@@ -282,9 +283,14 @@ modes, so the selected region remains visible after the button is released.
 The Copy button reads the browser selection first and then falls back to the
 current tab's retained tmux selection. Ctrl+Shift+C uses the same path. When the
 modern Clipboard API is unavailable on an HTTP LAN origin, TermDock uses a
-temporary selected text field with the browser's legacy copy command. Right-button
-events also continue to the terminal while the browser's own context-menu popup
-is suppressed over the terminal canvas.
+temporary selected text field with the browser's legacy copy command. TermDock
+caches a retained tmux selection immediately after mouse release, keeping the
+actual clipboard write inside the trusted Copy click or Ctrl+Shift+C event. A
+right-click opens tmux's mouse-bound terminal menu while the browser's unrelated
+context-menu popup is suppressed. Ctrl+Shift+V captures the trusted paste text,
+exits tmux copy mode asynchronously, and replays the exact text through xterm's
+terminal paste API, so a retained highlight cannot swallow the paste or freeze
+the page.
 
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very

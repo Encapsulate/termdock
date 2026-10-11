@@ -55,3 +55,21 @@ def test_selection_uses_session_specific_tmux_buffer(tmp_path: Path) -> None:
         ("list-buffers", "-F", "#{buffer_name}"),
         ("save-buffer", "-b", "termdock-termdock-abc123abc123-7", "-"),
     ]
+
+
+def test_prepare_paste_leaves_copy_mode(tmp_path: Path) -> None:
+    store = TabStore(tmp_path, "/bin/false", "test-socket", "termdock")
+    calls: list[tuple[str, ...]] = []
+
+    async def fake_tmux(*arguments: str) -> tuple[int, str, str]:
+        calls.append(arguments)
+        if arguments[0] == "display-message":
+            return 0, "1\n", ""
+        return 0, "", ""
+
+    store._tmux = fake_tmux  # type: ignore[method-assign]
+    asyncio.run(store.prepare_paste("main"))
+    assert calls == [
+        ("display-message", "-p", "-t", "termdock", "#{pane_in_mode}"),
+        ("send-keys", "-X", "-t", "termdock", "cancel"),
+    ]

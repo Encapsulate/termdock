@@ -49,6 +49,10 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "copyTerminalSelection" in script_text
             assert "handleCopyShortcut" in script_text
             assert "writeClipboard" in script_text
+            assert "prepareTerminalPaste" in script_text
+            assert "selectionCache" in script_text
+            assert 'terminalWindow.term?.paste' in script_text
+            assert "XMLHttpRequest" not in script_text
             assert "touchPending" in script_text
             assert 'touchAction="none"' in script_text
             assert "visualViewport" in script_text

@@ -2,6 +2,13 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.8 — 2026-10-10
+
+- Cached retained tmux selections immediately after mouse release so Copy and Ctrl+Shift+C can write the clipboard during the original trusted browser gesture without a blocking request.
+- Fixed Ctrl+Shift+V after a retained selection by capturing the trusted paste, leaving tmux copy mode asynchronously, and replaying the exact text through xterm's terminal paste API.
+- Replaced the blocking right-click request with a native tmux mouse binding, making terminal menu items clickable while JavaScript only suppresses the browser's unrelated context menu.
+- Removed synchronous browser network requests from selection, paste, and right-click handling so a slow local service cannot freeze the page.
+
 ## 1.0.7 — 2026-10-10
 
 - Fixed Copy on LAN HTTP origins where the modern Clipboard API is unavailable by selecting the retained text in a temporary textarea before invoking the legacy copy command.
