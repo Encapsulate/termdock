@@ -52,6 +52,8 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "prepareTerminalPaste" in script_text
             assert "selectionCache" in script_text
             assert 'terminalWindow.term?.paste' in script_text
+            assert "selectTouchRange" in script_text
+            assert "term?.getSelection?.()" in script_text
             assert "XMLHttpRequest" not in script_text
             assert "touchPending" in script_text
             assert 'touchAction="none"' in script_text

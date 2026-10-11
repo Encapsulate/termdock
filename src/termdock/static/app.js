@@ -187,6 +187,7 @@ function installMouseSelection(frame){
     let ignoreMouseUntil=0;
     let touchPending=null;
     let touchSelecting=false;
+    let touchSelectionVersion=0;
     const dispatch=(source,target,forceSelection=false)=>{
       const event=new win.MouseEvent(source.type,{
         bubbles:true,cancelable:true,view:win,
@@ -221,22 +222,43 @@ function installMouseSelection(frame){
       screenX:touch.screenX,screenY:touch.screenY,button:0,buttons,detail:1,
       ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,
     });
+    const touchCell=touch=>{
+      const screen=doc.querySelector(".xterm-screen");
+      const terminalWindow=frame.contentWindow;
+      const term=terminalWindow.term;
+      if(!screen||!term)return null;
+      const rect=screen.getBoundingClientRect();
+      const column=Math.max(0,Math.min(term.cols-1,Math.floor((touch.clientX-rect.left)*term.cols/rect.width)));
+      const visibleRow=Math.max(0,Math.min(term.rows-1,Math.floor((touch.clientY-rect.top)*term.rows/rect.height)));
+      return {column,row:(term.buffer?.active?.viewportY||0)+visibleRow};
+    };
+    const selectTouchRange=(start,end)=>{
+      const term=frame.contentWindow.term;
+      if(!term||!start||!end)return null;
+      let first=start,last=end;
+      if(first.row>last.row||(first.row===last.row&&first.column>last.column)){
+        first=end;last=start;
+      }
+      const length=Math.max(1,(last.row-first.row)*term.cols+last.column-first.column);
+      term.select(first.column,first.row,length);
+      return {column:first.column,row:first.row,length,text:term.getSelection()};
+    };
     const resetTouch=()=>{touchPending=null;touchSelecting=false};
     win.addEventListener("touchstart",event=>{
       if(event.touches.length!==1){resetTouch();return}
       const touch=event.touches[0];
-      touchPending=fromTouch("mousedown",touch,event.target,1);touchSelecting=false;
+      touchSelectionVersion+=1;
+      touchPending={...fromTouch("mousedown",touch,event.target,1),cell:touchCell(touch)};touchSelecting=false;
       event.preventDefault();event.stopImmediatePropagation();
     },{capture:true,passive:false});
     win.addEventListener("touchmove",event=>{
       if(event.touches.length!==1){resetTouch();return}
       if(!touchPending)return;
       const touch=event.touches[0];
-      const target=doc.elementFromPoint(touch.clientX,touch.clientY)||touchPending.target;
       if(!touchSelecting&&Math.hypot(touch.clientX-touchPending.clientX,touch.clientY-touchPending.clientY)>=4){
-        touchSelecting=true;dispatch(touchPending,touchPending.target,true);
+        touchSelecting=true;
       }
-      if(touchSelecting)dispatch(fromTouch("mousemove",touch,target,1),target,true);
+      if(touchSelecting)selectTouchRange(touchPending.cell,touchCell(touch));
       event.preventDefault();event.stopImmediatePropagation();
     },{capture:true,passive:false});
     win.addEventListener("touchend",event=>{
@@ -245,7 +267,14 @@ function installMouseSelection(frame){
       const target=doc.elementFromPoint(touch.clientX,touch.clientY)||touchPending.target;
       const current=fromTouch("mouseup",touch,target,0);
       if(touchSelecting){
-        dispatch(current,target,true);
+        const retained=selectTouchRange(touchPending.cell,touchCell(touch));
+        const version=touchSelectionVersion;
+        if(retained?.text)selectionCache.set(active,retained.text);
+        for(const delay of [0,250])setTimeout(()=>{
+          if(version===touchSelectionVersion&&retained?.text&&!frame.contentWindow.term.getSelection()){
+            frame.contentWindow.term.select(retained.column,retained.row,retained.length);
+          }
+        },delay);
       }else{
         dispatch(touchPending,touchPending.target);dispatch(current,target);
         doc.querySelector(".xterm-helper-textarea")?.focus();
@@ -269,7 +298,7 @@ function flashKey(button,label){
 async function copyTerminalSelection(button){
   const frame=frames.get(active);
   try{
-    let text=frame?.contentWindow.getSelection()?.toString()||selectionCache.get(active)||"";
+    let text=frame?.contentWindow.term?.getSelection?.()||frame?.contentWindow.getSelection()?.toString()||selectionCache.get(active)||"";
     if(!text)text=await readTerminalSelection();
     if(!text){flashKey(button,"Select text");return false}
     await writeClipboard(text,frame);

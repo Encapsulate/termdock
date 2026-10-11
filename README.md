@@ -273,9 +273,10 @@ before the setting was enabled.
 
 On touchscreens, TermDock distinguishes taps from drags: a simple tap is still
 forwarded to the terminal application, while one-finger movement beyond a small
-threshold activates xterm's browser-native selection path. The selected text
-remains highlighted and can be copied with the Copy key or the browser's normal
-copy command. Two fingers remain reserved for scrolling history.
+threshold directly selects the corresponding xterm cell range. The range is
+retained after touch release and restored if a compatibility event clears it.
+The Copy key reads that exact xterm selection before using the server-backed
+desktop fallback. Two fingers remain reserved for scrolling history.
 
 On desktop, real mouse events pass through to ttyd and tmux unchanged. tmux's
 mouse-release binding uses `copy-selection-no-clear` in both emacs and vi copy

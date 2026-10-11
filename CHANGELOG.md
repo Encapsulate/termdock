@@ -2,6 +2,12 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.9 — 2026-10-10
+
+- Replaced Android's inconsistent Shift+mouse touch bridge with direct xterm cell-range selection for one-finger drags.
+- Retained and restored the exact xterm selection after touch release so compatibility events cannot immediately clear the highlight.
+- Made Copy read xterm's retained selection directly before falling back to browser or server-backed selections.
+
 ## 1.0.8 — 2026-10-10
 
 - Cached retained tmux selections immediately after mouse release so Copy and Ctrl+Shift+C can write the clipboard during the original trusted browser gesture without a blocking request.
