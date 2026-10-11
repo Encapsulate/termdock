@@ -1,3 +1,5 @@
+from importlib.resources import files
+
 import pytest
 
 from termdock.launcher import command_from_env, session_name
@@ -26,5 +28,16 @@ def test_ssh_command_is_argument_safe(monkeypatch: pytest.MonkeyPatch, tmp_path)
         monkeypatch.setenv(key, value)
     command = command_from_env("abcdef012345")
     assert command[-1] == "alice@host.example"
-    assert command[:7] == ["/usr/bin/tmux", "-L", "termdock", "new-session", "-A", "-s", "termdock-abcdef012345"]
+    assert command[:3] == ["/usr/bin/tmux", "-L", "termdock"]
+    assert command[3] == "-f"
+    assert command[4].endswith("termdock/tmux.conf")
+    assert command[5:9] == ["new-session", "-A", "-s", "termdock-abcdef012345"]
     assert "BatchMode=yes" in command
+
+
+def test_tmux_config_keeps_deep_history_and_reserves_wheel() -> None:
+    config = files("termdock").joinpath("tmux.conf").read_text("utf-8")
+    assert "history-limit 100000" in config
+    assert "mouse on" in config
+    assert "WheelUpPane" in config
+    assert "mouse_any_flag" not in config

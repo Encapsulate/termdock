@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from importlib.resources import files
 
 TAB_ID = re.compile(r"[a-f0-9]{12}")
 
@@ -20,9 +21,10 @@ def command_from_env(tab_id: str) -> list[str]:
     session = session_name(prefix, tab_id)
     tmux = os.environ.get("TERMDOCK_TMUX_BIN", "tmux")
     ssh = os.environ.get("TERMDOCK_SSH_BIN", "ssh")
+    tmux_config = str(files("termdock").joinpath("tmux.conf"))
     target = f"{os.environ['TERMDOCK_SSH_USER']}@{os.environ['TERMDOCK_SSH_HOST']}"
     return [
-        tmux, "-L", os.environ.get("TERMDOCK_TMUX_SOCKET", "termdock"),
+        tmux, "-L", os.environ.get("TERMDOCK_TMUX_SOCKET", "termdock"), "-f", tmux_config,
         "new-session", "-A", "-s", session,
         ssh, "-tt", "-p", os.environ.get("TERMDOCK_SSH_PORT", "22"),
         "-i", os.environ["TERMDOCK_SSH_IDENTITY_FILE"],

@@ -107,7 +107,14 @@ function installTouchScroll(frame){
     win.addEventListener("touchmove",event=>{
       if(event.touches.length<2){reset();return}
       const nextCenterY=centerY(event.touches);
-      if(lastCenterY!==null)viewport.scrollTop+=(lastCenterY-nextCenterY)*1.35;
+      if(lastCenterY!==null){
+        const screen=doc.querySelector(".xterm-screen")||viewport;
+        screen.dispatchEvent(new win.WheelEvent("wheel",{
+          deltaY:(lastCenterY-nextCenterY)*2,deltaMode:0,
+          clientX:event.touches[0].clientX,clientY:event.touches[0].clientY,
+          bubbles:true,cancelable:true,
+        }));
+      }
       lastCenterY=nextCenterY;
       event.preventDefault();event.stopImmediatePropagation();
     },{capture:true,passive:false});

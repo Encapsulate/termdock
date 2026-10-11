@@ -45,6 +45,7 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "installTouchScroll" in script_text
             assert "visualViewport" in script_text
             assert "emitTerminalKey" in script_text
+            assert "WheelEvent" in script_text
             stylesheet = await client.get("/static/style.css", headers=headers)
             assert stylesheet.status == 200
             assert "--viewport-height" in await stylesheet.text()

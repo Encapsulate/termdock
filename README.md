@@ -31,6 +31,8 @@ and defaults to loopback-only networking.
 - **Phone-friendly terminal:** two-finger drag scrolls xterm history without
   taking over ordinary one-finger taps, and the layout follows the visual
   viewport when Android's software keyboard opens.
+- **Deep, application-proof scrollback:** xterm and tmux retain up to 100,000
+  lines, and the wheel scrolls pane history instead of an inner chat/TUI.
 - **Permanent extra-key bar:** compact Ctrl and Alt latches plus immediate Tab
   and Clear keys stay directly below the terminal without stealing focus.
 - **Server-saved tab registry:** reopen the page from another authorized browser
@@ -245,7 +247,7 @@ must remain loopback-only behind TermDock.
 | `+ New terminal` | Create and select the next terminal |
 | `Reconnect view` | Reload only the active ttyd view; the shell remains in tmux |
 | `×` on a tab | Confirm, then end that tab's tmux session |
-| Two-finger vertical drag | Scroll terminal history on a touch screen |
+| Mouse wheel or two-finger vertical drag | Scroll persistent tmux pane history, including behind a full-screen TUI |
 | Ctrl or Alt button | Latch that modifier for the next typed key; tap again to cancel |
 | Tab button | Send Tab, including a currently latched Ctrl or Alt modifier |
 | Clear button | Send Ctrl+L to redraw the current terminal screen |
@@ -254,8 +256,13 @@ The shortcut listener runs in the iframe window's capture phase so xterm cannot
 consume Alt+number first. The handled keystroke is stopped before it can reach
 the shell.
 
-On touch devices, TermDock reserves a two-finger vertical drag for scrollback.
-One-finger interaction is left to xterm for focusing, selecting, and typing.
+TermDock reserves the mouse wheel and a two-finger vertical drag for tmux pane
+scrollback, even if a full-screen chat or TUI requests mouse events. One-finger
+interaction is left to xterm for focusing, selecting, and typing. Scrolling
+back to the bottom automatically leaves tmux copy mode and returns the wheel to
+normal live-terminal behavior. Both tmux and xterm are configured for 100,000
+lines; changing that limit does not retroactively recover lines already evicted
+before the setting was enabled.
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very
 short viewports, the helper caption is hidden to preserve working terminal rows.

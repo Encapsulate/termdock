@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "termdock"
-version = "1.0.2"
+version = "1.0.3"
 description = "Persistent, multi-tab SSH workspaces in your browser"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -38,7 +38,7 @@ Repository = "https://github.com/Encapsulate/termdock"
 where = ["src"]
 
 [tool.setuptools.package-data]
-termdock = ["static/*"]
+termdock = ["static/*", "tmux.conf"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

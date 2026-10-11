@@ -175,7 +175,8 @@ async def resources(app: web.Application) -> AsyncIterator[None]:
     environment.update(config.launcher_environment())
     command = [
         config.ttyd_bin, "-i", "127.0.0.1", "-p", str(config.ttyd_port), "-b", "/console", "-a", "-W",
-        "-t", "fontSize=14", "-t", "cursorStyle=bar", "-t", "disableLeaveAlert=true",
+        "-t", "fontSize=14", "-t", "cursorStyle=bar", "-t", "scrollback=100000",
+        "-t", "disableLeaveAlert=true",
         "-t", 'theme={"background":"#020704","foreground":"#baffd5","cursor":"#6cffaa","selection":"#1b6d3d","black":"#001d0b","brightGreen":"#79ffad","green":"#39d477"}',
         sys.executable, "-m", "termdock.launcher",
     ]
