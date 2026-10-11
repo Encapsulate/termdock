@@ -2,6 +2,12 @@
 
 All notable changes to TermDock are documented here.
 
+## 1.0.5 — 2026-10-10
+
+- Fixed the phone-specific gap in 1.0.4 by translating one-finger terminal drags into persistent xterm selections.
+- Preserved one-finger taps for terminal focus and interactive applications while keeping two-finger history scrolling unchanged.
+- Suppressed compatibility mouse events after touch selection so releasing a finger cannot immediately clear the highlight.
+
 ## 1.0.4 — 2026-10-10
 
 - Made ordinary mouse drags create persistent, browser-native xterm selections even while tmux mouse support is enabled.

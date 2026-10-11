@@ -35,8 +35,8 @@ and defaults to loopback-only networking.
   lines, and the wheel scrolls pane history instead of an inner chat/TUI.
 - **Permanent extra-key bar:** compact Ctrl and Alt latches plus immediate Tab
   and Clear keys stay directly below the terminal without stealing focus.
-- **Reliable selection and copy:** ordinary mouse drags select xterm text instead
-  of disappearing into tmux mouse mode, and the Copy key supports touch devices.
+- **Reliable selection and copy:** mouse drags and one-finger phone drags select
+  xterm text instead of disappearing into tmux mouse mode; Copy uses that selection.
 - **Server-saved tab registry:** reopen the page from another authorized browser
   and see the same workspace list.
 - **SSH key authentication:** the terminal launcher always uses a configured
@@ -250,7 +250,7 @@ must remain loopback-only behind TermDock.
 | `Reconnect view` | Reload only the active ttyd view; the shell remains in tmux |
 | `×` on a tab | Confirm, then end that tab's tmux session |
 | Mouse wheel or two-finger vertical drag | Scroll persistent tmux pane history, including behind a full-screen TUI |
-| Mouse drag across terminal text | Create a persistent browser selection, even while tmux mouse mode is active |
+| Mouse drag or one-finger drag across terminal text | Create a persistent browser selection, even while tmux mouse mode is active |
 | Ctrl or Alt button | Latch that modifier for the next typed key; tap again to cancel |
 | Tab button | Send Tab, including a currently latched Ctrl or Alt modifier |
 | Copy button | Copy the active terminal selection to the browser clipboard |
@@ -269,10 +269,11 @@ lines; changing that limit does not retroactively recover lines already evicted
 before the setting was enabled.
 
 Tmux mouse mode normally captures a drag and clears its highlight on release.
-TermDock distinguishes clicks from drags: a simple click is still forwarded to
-the terminal application, while movement beyond a small threshold activates
-xterm's browser-native selection path. The selected text remains highlighted
-and can be copied with the Copy key or the browser's normal copy command.
+TermDock distinguishes taps/clicks from drags: a simple tap or click is still
+forwarded to the terminal application, while one-finger or mouse movement beyond
+a small threshold activates xterm's browser-native selection path. The selected
+text remains highlighted and can be copied with the Copy key or the browser's
+normal copy command. Two fingers remain reserved for scrolling history.
 
 The page also follows the browser's visual viewport rather than the full layout
 viewport, keeping the terminal above an open Android software keyboard. On very

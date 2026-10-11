@@ -46,6 +46,8 @@ def test_http_auth_csrf_and_security_headers(tmp_path: Path) -> None:
             assert "installTouchScroll" in script_text
             assert "installMouseSelection" in script_text
             assert "copyTerminalSelection" in script_text
+            assert "touchPending" in script_text
+            assert 'touchAction="none"' in script_text
             assert "visualViewport" in script_text
             assert "emitTerminalKey" in script_text
             assert "WheelEvent" in script_text

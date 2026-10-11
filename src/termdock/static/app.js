@@ -128,12 +128,17 @@ function installMouseSelection(frame){
   try{
     const doc=frame.contentDocument;
     const win=frame.contentWindow;
-    if(!doc.querySelector(".xterm"))return false;
+    const terminal=doc.querySelector(".xterm");
+    if(!terminal)return false;
     if(doc.documentElement.dataset.termdockMouseSelection)return true;
     doc.documentElement.dataset.termdockMouseSelection="true";
+    terminal.style.touchAction="none";
     let pending=null;
     let selecting=false;
-    let suppressClick=false;
+    let suppressClickUntil=0;
+    let ignoreMouseUntil=0;
+    let touchPending=null;
+    let touchSelecting=false;
     const snapshot=event=>({
       type:event.type,target:event.target,clientX:event.clientX,clientY:event.clientY,
       screenX:event.screenX,screenY:event.screenY,button:event.button,buttons:event.buttons,
@@ -152,11 +157,13 @@ function installMouseSelection(frame){
       target.dispatchEvent(event);
     };
     win.addEventListener("mousedown",event=>{
+      if(Date.now()<ignoreMouseUntil){event.preventDefault();event.stopImmediatePropagation();return}
       if(event.termdockSelectionEvent||event.button!==0||event.shiftKey||!event.target.closest?.(".xterm"))return;
       pending=snapshot(event);selecting=false;
       event.preventDefault();event.stopImmediatePropagation();
     },{capture:true,passive:false});
     win.addEventListener("mousemove",event=>{
+      if(Date.now()<ignoreMouseUntil&&!event.termdockSelectionEvent){event.preventDefault();event.stopImmediatePropagation();return}
       if(!pending||event.termdockSelectionEvent)return;
       if(!(event.buttons&1)){pending=null;selecting=false;return}
       if(!selecting&&Math.hypot(event.clientX-pending.clientX,event.clientY-pending.clientY)>=4){
@@ -166,22 +173,60 @@ function installMouseSelection(frame){
       event.preventDefault();event.stopImmediatePropagation();
     },{capture:true,passive:false});
     win.addEventListener("mouseup",event=>{
+      if(Date.now()<ignoreMouseUntil&&!event.termdockSelectionEvent){event.preventDefault();event.stopImmediatePropagation();return}
       if(!pending||event.termdockSelectionEvent)return;
       event.preventDefault();event.stopImmediatePropagation();
       const current=snapshot(event);
       if(selecting){
-        dispatch(current,event.target,true);suppressClick=true;
-        setTimeout(()=>{suppressClick=false},0);
+        dispatch(current,event.target,true);suppressClickUntil=Date.now()+800;
       }else{
         dispatch(pending,pending.target);dispatch(current,event.target);
       }
       pending=null;selecting=false;
     },{capture:true,passive:false});
     win.addEventListener("click",event=>{
-      if(!suppressClick)return;
-      suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
+      if(Date.now()>suppressClickUntil)return;
+      event.preventDefault();event.stopImmediatePropagation();
     },true);
-    win.addEventListener("blur",()=>{pending=null;selecting=false});
+    const fromTouch=(type,touch,target,buttons)=>({
+      type,target,clientX:touch.clientX,clientY:touch.clientY,
+      screenX:touch.screenX,screenY:touch.screenY,button:0,buttons,detail:1,
+      ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,
+    });
+    const resetTouch=()=>{touchPending=null;touchSelecting=false};
+    win.addEventListener("touchstart",event=>{
+      if(event.touches.length!==1){resetTouch();return}
+      const touch=event.touches[0];
+      touchPending=fromTouch("mousedown",touch,event.target,1);touchSelecting=false;
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("touchmove",event=>{
+      if(event.touches.length!==1){resetTouch();return}
+      if(!touchPending)return;
+      const touch=event.touches[0];
+      const target=doc.elementFromPoint(touch.clientX,touch.clientY)||touchPending.target;
+      if(!touchSelecting&&Math.hypot(touch.clientX-touchPending.clientX,touch.clientY-touchPending.clientY)>=4){
+        touchSelecting=true;dispatch(touchPending,touchPending.target,true);
+      }
+      if(touchSelecting)dispatch(fromTouch("mousemove",touch,target,1),target,true);
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("touchend",event=>{
+      if(!touchPending||event.touches.length)return;
+      const touch=event.changedTouches[0];
+      const target=doc.elementFromPoint(touch.clientX,touch.clientY)||touchPending.target;
+      const current=fromTouch("mouseup",touch,target,0);
+      if(touchSelecting){
+        dispatch(current,target,true);suppressClickUntil=Date.now()+800;
+      }else{
+        dispatch(touchPending,touchPending.target);dispatch(current,target);
+        doc.querySelector(".xterm-helper-textarea")?.focus();
+      }
+      ignoreMouseUntil=Date.now()+800;resetTouch();
+      event.preventDefault();event.stopImmediatePropagation();
+    },{capture:true,passive:false});
+    win.addEventListener("touchcancel",resetTouch,{capture:true});
+    win.addEventListener("blur",()=>{pending=null;selecting=false;resetTouch()});
     return true;
   }catch{return false}
 }
@@ -216,7 +261,7 @@ function ensureFrame(id){
   if(frame)return frame;
   frame=document.createElement("iframe");
   frame.dataset.id=id;frame.title="SSH terminal";frame.allow="clipboard-read; clipboard-write";frame.src=terminalUrl(id);
-  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installTouchScroll(frame);installMouseSelection(frame);setTimeout(()=>{installTouchScroll(frame);installMouseSelection(frame)},250);setTimeout(()=>{installTouchScroll(frame);installMouseSelection(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
+  frame.addEventListener("load",()=>{try{frame.contentWindow.addEventListener("keydown",handleShortcut,true);frame.contentWindow.addEventListener("keydown",handleLatchedKey,true);frame.contentWindow.addEventListener("beforeinput",handleLatchedInput,true);installMouseSelection(frame);installTouchScroll(frame);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},250);setTimeout(()=>{installMouseSelection(frame);installTouchScroll(frame)},1000)}catch{}if(id===active)focusFrame(frame)});
   frames.set(id,frame);viewsNode.append(frame);return frame;
 }
 
